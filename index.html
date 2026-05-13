@@ -38,11 +38,11 @@
             overflow-x: auto; background: white; border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px;
         }
-        table { border-collapse: collapse; width: 100%; min-width: 600px; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
         th, td { border: 1px solid #e0e0e0; padding: 10px 14px; text-align: center; }
         th { background: #e8f5e9; font-weight: 600; position: sticky; top: 0; }
-        th.plant-header { text-align: left; min-width: 140px; }
-        td.plant-name { text-align: left; font-weight: 500; background: #fafafa; }
+        th.plant-header { text-align: left; min-width: 120px; position: sticky; left: 0; z-index: 2; background: #e8f5e9; }
+        td.plant-name { text-align: left; font-weight: 500; background: #fafafa; position: sticky; left: 0; z-index: 1; }
         td.cell {
             cursor: pointer; font-size: 20px; min-width: 50px;
             transition: background 0.15s; user-select: none;
@@ -69,9 +69,17 @@
         }
         .plant-list { list-style: none; margin-bottom: 15px; }
         .plant-list li {
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex; align-items: center; gap: 8px;
             padding: 8px 10px; border-bottom: 1px solid #eee;
         }
+        .plant-list li input {
+            flex: 1; padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+        }
+        .plant-list li .btn-reorder {
+            background: #e0e0e0; border: none; border-radius: 4px;
+            padding: 4px 8px; cursor: pointer; font-size: 14px;
+        }
+        .plant-list li .btn-reorder:hover { background: #bdbdbd; }
         .plant-list li .delete-btn {
             background: #ef5350; color: white; border: none; border-radius: 4px;
             padding: 4px 8px; cursor: pointer; font-size: 12px;
@@ -149,7 +157,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const NUM_DAYS = 7;
+        const NUM_DAYS = 4;
         let dayOffset = 0;
         let plants = [];
         let records = {};
@@ -279,12 +287,45 @@
             list.innerHTML = '';
             plants.forEach((p, i) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${p}</span><button class="delete-btn" onclick="removePlant(${i})">Remove</button>`;
+                li.innerHTML = `
+                    <button class="btn-reorder" onclick="movePlant(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+                    <button class="btn-reorder" onclick="movePlant(${i}, 1)" ${i === plants.length - 1 ? 'disabled' : ''}>&#9660;</button>
+                    <input type="text" value="${p}" onchange="renamePlant(${i}, this.value)">
+                    <button class="delete-btn" onclick="removePlant(${i})">Remove</button>`;
                 list.appendChild(li);
             });
             document.getElementById('edit-modal').classList.add('active');
         }
         window.openEditModal = openEditModal;
+
+        function renamePlant(index, newName) {
+            newName = newName.trim();
+            if (!newName) return;
+            const oldName = plants[index];
+            if (oldName === newName) return;
+            Object.keys(records).forEach(key => {
+                if (key.startsWith(oldName + '|')) {
+                    const date = key.split('|')[1];
+                    const newKey = `${newName}|${date}`;
+                    set(ref(db, `records/${newKey}`), records[key]);
+                    remove(ref(db, `records/${key}`));
+                }
+            });
+            plants[index] = newName;
+            set(ref(db, 'plants'), plants);
+        }
+        window.renamePlant = renamePlant;
+
+        function movePlant(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= plants.length) return;
+            const temp = plants[index];
+            plants[index] = plants[newIndex];
+            plants[newIndex] = temp;
+            set(ref(db, 'plants'), plants);
+            openEditModal();
+        }
+        window.movePlant = movePlant;
 
         function removePlant(index) {
             const plant = plants[index];
