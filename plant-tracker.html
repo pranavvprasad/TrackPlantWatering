@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Watering Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f4f0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 { text-align: center; margin-bottom: 20px; color: #2d5a2d; }
+        .toolbar {
+            display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+            font-size: 14px; font-weight: 500; transition: background 0.2s;
+        }
+        .btn-add { background: #4caf50; color: white; }
+        .btn-add:hover { background: #388e3c; }
+        .btn-edit { background: #ff9800; color: white; }
+        .btn-edit:hover { background: #f57c00; }
+        .legend {
+            display: flex; gap: 20px; justify-content: center; margin-bottom: 15px; font-size: 14px;
+        }
+        .legend span { display: flex; align-items: center; gap: 5px; }
+        .legend .dot {
+            width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+        }
+        .dot-water { background: #2196f3; }
+        .dot-fert { background: #e53935; }
+        .dot-empty { background: #ddd; border: 1px solid #bbb; }
+        .table-container {
+            overflow-x: auto; background: white; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px;
+        }
+        table { border-collapse: collapse; width: 100%; min-width: 600px; }
+        th, td { border: 1px solid #e0e0e0; padding: 10px 14px; text-align: center; }
+        th { background: #e8f5e9; font-weight: 600; position: sticky; top: 0; }
+        th.plant-header { text-align: left; min-width: 140px; }
+        td.plant-name { text-align: left; font-weight: 500; background: #fafafa; }
+        td.cell {
+            cursor: pointer; font-size: 20px; min-width: 50px;
+            transition: background 0.15s; user-select: none;
+        }
+        td.cell:hover { background: #f1f8e9; }
+        td.cell.watered { color: #2196f3; background: #e3f2fd; }
+        td.cell.fertilized { color: #e53935; background: #ffebee; }
+        .today { background: #fff9c4 !important; }
+        th.today { background: #f0f4c3 !important; }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 100; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 12px; padding: 25px; width: 90%; max-width: 400px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 15px; color: #2d5a2d; }
+        .modal input[type="text"] {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;
+            font-size: 14px; margin-bottom: 10px;
+        }
+        .plant-list { list-style: none; margin-bottom: 15px; }
+        .plant-list li {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 10px; border-bottom: 1px solid #eee;
+        }
+        .plant-list li .delete-btn {
+            background: #ef5350; color: white; border: none; border-radius: 4px;
+            padding: 4px 8px; cursor: pointer; font-size: 12px;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-close { background: #9e9e9e; color: white; }
+    </style>
+</head>
+<body>
+    <h1>&#127793; Plant Watering Tracker</h1>
+    <div class="legend">
+        <span><span class="dot dot-empty"></span> No action</span>
+        <span><span class="dot dot-water"></span> Watered</span>
+        <span><span class="dot dot-fert"></span> Fertilized</span>
+    </div>
+    <div class="toolbar">
+        <button class="btn-add" onclick="openAddModal()">+ Add Plant</button>
+        <button class="btn-edit" onclick="openEditModal()">Edit Plants</button>
+    </div>
+    <div class="table-container">
+        <table id="tracker-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal">
+            <h2>Add Plant</h2>
+            <input type="text" id="new-plant-name" placeholder="Plant name..." onkeydown="if(event.key==='Enter')addPlant()">
+            <div class="modal-actions">
+                <button class="btn-close" onclick="closeModal('add-modal')">Cancel</button>
+                <button class="btn-add" onclick="addPlant()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal">
+            <h2>Edit Plants</h2>
+            <ul class="plant-list" id="plant-list-edit"></ul>
+            <div class="modal-actions">
+                <button class="btn-close" onclick="closeModal('edit-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const NUM_DAYS = 7;
+        let plants = JSON.parse(localStorage.getItem('pt-plants') || '["Basil","Tomato","Fern","Succulent"]');
+        let records = JSON.parse(localStorage.getItem('pt-records') || '{}');
+
+        function save() {
+            localStorage.setItem('pt-plants', JSON.stringify(plants));
+            localStorage.setItem('pt-records', JSON.stringify(records));
+        }
+
+        function getDates() {
+            const dates = [];
+            const today = new Date();
+            for (let i = NUM_DAYS - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                dates.push(d);
+            }
+            return dates;
+        }
+
+        function fmtDate(d) {
+            return d.toISOString().split('T')[0];
+        }
+
+        function fmtDisplay(d) {
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function isToday(d) {
+            const t = new Date();
+            return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+        }
+
+        function getState(plant, date) {
+            const key = `${plant}|${date}`;
+            return records[key] || 'empty';
+        }
+
+        function cycleState(plant, date) {
+            const key = `${plant}|${date}`;
+            const current = records[key] || 'empty';
+            if (current === 'empty') records[key] = 'watered';
+            else if (current === 'watered') records[key] = 'fertilized';
+            else delete records[key];
+            save();
+            render();
+        }
+
+        function render() {
+            const dates = getDates();
+            const table = document.getElementById('tracker-table');
+            const thead = table.querySelector('thead tr');
+            const tbody = table.querySelector('tbody');
+
+            thead.innerHTML = '<th class="plant-header">Plant</th>';
+            dates.forEach(d => {
+                const th = document.createElement('th');
+                th.textContent = fmtDisplay(d);
+                if (isToday(d)) th.classList.add('today');
+                thead.appendChild(th);
+            });
+
+            tbody.innerHTML = '';
+            plants.forEach(plant => {
+                const tr = document.createElement('tr');
+                const tdName = document.createElement('td');
+                tdName.className = 'plant-name';
+                tdName.textContent = plant;
+                tr.appendChild(tdName);
+
+                dates.forEach(d => {
+                    const td = document.createElement('td');
+                    td.className = 'cell';
+                    const dateStr = fmtDate(d);
+                    const state = getState(plant, dateStr);
+                    if (state === 'watered') { td.textContent = '✔'; td.classList.add('watered'); }
+                    else if (state === 'fertilized') { td.textContent = '✔'; td.classList.add('fertilized'); }
+                    if (isToday(d)) td.classList.add('today');
+                    td.onclick = () => cycleState(plant, dateStr);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openAddModal() {
+            document.getElementById('new-plant-name').value = '';
+            document.getElementById('add-modal').classList.add('active');
+            document.getElementById('new-plant-name').focus();
+        }
+
+        function addPlant() {
+            const name = document.getElementById('new-plant-name').value.trim();
+            if (!name) return;
+            plants.push(name);
+            save();
+            render();
+            closeModal('add-modal');
+        }
+
+        function openEditModal() {
+            const list = document.getElementById('plant-list-edit');
+            list.innerHTML = '';
+            plants.forEach((p, i) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${p}</span><button class="delete-btn" onclick="removePlant(${i})">Remove</button>`;
+                list.appendChild(li);
+            });
+            document.getElementById('edit-modal').classList.add('active');
+        }
+
+        function removePlant(index) {
+            const plant = plants[index];
+            Object.keys(records).forEach(key => {
+                if (key.startsWith(plant + '|')) delete records[key];
+            });
+            plants.splice(index, 1);
+            save();
+            openEditModal();
+            render();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+            el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+        });
+
+        render();
+    </script>
+</body>
+</html>
