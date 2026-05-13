@@ -118,6 +118,22 @@
         .app-content { display: none; }
         .app-content.visible { display: block; }
         .auth-error { color: #e53935; font-size: 14px; margin-top: 8px; }
+        .auth-divider { color: #999; font-size: 13px; margin: 4px 0; }
+        .auth-form {
+            display: flex; flex-direction: column; gap: 8px; width: 260px;
+        }
+        .auth-form input {
+            padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+        }
+        .auth-form .btn-email {
+            background: #333; color: white; padding: 10px; border-radius: 6px;
+            font-size: 14px; cursor: pointer; border: none;
+        }
+        .auth-form .btn-email:hover { background: #555; }
+        .auth-form .btn-toggle {
+            background: none; border: none; color: #4285f4; font-size: 13px;
+            cursor: pointer; padding: 4px;
+        }
     </style>
 </head>
 <body>
@@ -126,6 +142,13 @@
     <div class="auth-screen" id="auth-screen">
         <p>Sign in to access the tracker</p>
         <button class="btn-signin" onclick="signIn()">&#x1F310; Sign in with Google</button>
+        <p class="auth-divider">— or —</p>
+        <div class="auth-form">
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-password" placeholder="Password">
+            <button class="btn-email" id="auth-submit" onclick="emailSignIn()">Sign in</button>
+            <button class="btn-toggle" id="auth-toggle" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
+        </div>
         <p class="auth-error" id="auth-error"></p>
     </div>
 
@@ -176,7 +199,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
-        import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDCvZWFA3JB8LF6iA9qHFjqKqdeT1B3KY4",
@@ -194,6 +217,7 @@
         const provider = new GoogleAuthProvider();
 
         let currentUid = null;
+        let isSignUpMode = false;
 
         function signIn() {
             signInWithPopup(auth, provider).catch(err => {
@@ -201,6 +225,27 @@
             });
         }
         window.signIn = signIn;
+
+        function emailSignIn() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+            const authFn = isSignUpMode ? createUserWithEmailAndPassword : signInWithEmailAndPassword;
+            authFn(auth, email, password).catch(err => {
+                document.getElementById('auth-error').textContent = err.message;
+            });
+        }
+        window.emailSignIn = emailSignIn;
+
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById('auth-submit').textContent = isSignUpMode ? 'Sign up' : 'Sign in';
+            document.getElementById('auth-toggle').textContent = isSignUpMode
+                ? 'Already have an account? Sign in'
+                : "Don't have an account? Sign up";
+            document.getElementById('auth-error').textContent = '';
+        }
+        window.toggleAuthMode = toggleAuthMode;
 
         function signOutUser() {
             signOut(auth);
