@@ -192,6 +192,8 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
+        let currentUid = null;
+
         function signIn() {
             signInWithPopup(auth, provider).catch(err => {
                 document.getElementById('auth-error').textContent = err.message;
@@ -210,20 +212,14 @@
             const authError = document.getElementById('auth-error');
 
             if (user) {
-                const emailKey = user.email.replace(/\./g, ',');
-                onValue(ref(db, `allowedEmails/${emailKey}`), (snapshot) => {
-                    if (snapshot.val()) {
-                        authScreen.style.display = 'none';
-                        appContent.classList.add('visible');
-                        document.getElementById('user-bar').innerHTML =
-                            `${user.email} <button class="btn-signout" onclick="signOutUser()">Sign out</button>`;
-                        startListeners();
-                    } else {
-                        authError.textContent = `Access denied for ${user.email}.`;
-                        signOut(auth);
-                    }
-                }, { onlyOnce: true });
+                currentUid = user.uid;
+                authScreen.style.display = 'none';
+                appContent.classList.add('visible');
+                document.getElementById('user-bar').innerHTML =
+                    `${user.displayName || user.email} <button class="btn-signout" onclick="signOutUser()">Sign out</button>`;
+                initUser();
             } else {
+                currentUid = null;
                 authScreen.style.display = 'flex';
                 appContent.classList.remove('visible');
                 authError.textContent = '';
@@ -236,16 +232,29 @@
         let records = {};
         let listenersStarted = false;
 
+        function userRef(path) {
+            return ref(db, `users/${currentUid}/${path}`);
+        }
+
+        function initUser() {
+            onValue(userRef('plants'), (snapshot) => {
+                if (snapshot.val() === null) {
+                    set(userRef('plants'), ['Basil', 'Tomato']);
+                }
+            }, { onlyOnce: true });
+            startListeners();
+        }
+
         function startListeners() {
             if (listenersStarted) return;
             listenersStarted = true;
 
-            onValue(ref(db, 'plants'), (snapshot) => {
+            onValue(userRef('plants'), (snapshot) => {
                 plants = snapshot.val() || [];
                 render();
             });
 
-            onValue(ref(db, 'records'), (snapshot) => {
+            onValue(userRef('records'), (snapshot) => {
                 records = snapshot.val() || {};
                 render();
             });
@@ -308,11 +317,11 @@
             const key = `${plant}|${date}`;
             const current = records[key] || 'empty';
             if (current === 'empty') {
-                set(ref(db, `records/${key}`), 'watered');
+                set(userRef(`records/${key}`), 'watered');
             } else if (current === 'watered') {
-                set(ref(db, `records/${key}`), 'fertilized');
+                set(userRef(`records/${key}`), 'fertilized');
             } else {
-                remove(ref(db, `records/${key}`));
+                remove(userRef(`records/${key}`));
             }
         }
 
@@ -365,7 +374,7 @@
             const name = document.getElementById('new-plant-name').value.trim();
             if (!name) return;
             plants.push(name);
-            set(ref(db, 'plants'), plants);
+            set(userRef('plants'), plants);
             closeModal('add-modal');
         }
         window.addPlant = addPlant;
@@ -395,12 +404,12 @@
                 if (key.startsWith(oldName + '|')) {
                     const date = key.split('|')[1];
                     const newKey = `${newName}|${date}`;
-                    set(ref(db, `records/${newKey}`), records[key]);
-                    remove(ref(db, `records/${key}`));
+                    set(userRef(`records/${newKey}`), records[key]);
+                    remove(userRef(`records/${key}`));
                 }
             });
             plants[index] = newName;
-            set(ref(db, 'plants'), plants);
+            set(userRef('plants'), plants);
         }
         window.renamePlant = renamePlant;
 
@@ -410,7 +419,7 @@
             const temp = plants[index];
             plants[index] = plants[newIndex];
             plants[newIndex] = temp;
-            set(ref(db, 'plants'), plants);
+            set(userRef('plants'), plants);
             openEditModal();
         }
         window.movePlant = movePlant;
@@ -418,10 +427,10 @@
         function removePlant(index) {
             const plant = plants[index];
             Object.keys(records).forEach(key => {
-                if (key.startsWith(plant + '|')) remove(ref(db, `records/${key}`));
+                if (key.startsWith(plant + '|')) remove(userRef(`records/${key}`));
             });
             plants.splice(index, 1);
-            set(ref(db, 'plants'), plants);
+            set(userRef('plants'), plants);
             openEditModal();
         }
         window.removePlant = removePlant;
