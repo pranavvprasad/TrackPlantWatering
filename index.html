@@ -9,12 +9,12 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #f0f4f0;
-            padding: 20px;
+            padding: 12px;
             color: #333;
         }
-        h1 { text-align: center; margin-bottom: 20px; color: #2d5a2d; }
+        h1 { text-align: center; margin-bottom: 12px; color: #2d5a2d; font-size: 1.4em; }
         .toolbar {
-            display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap;
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap;
         }
         button {
             padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
@@ -35,16 +35,16 @@
         .dot-fert { background: #e53935; }
         .dot-empty { background: #ddd; border: 1px solid #bbb; }
         .table-container {
-            overflow-x: auto; background: white; border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px;
+            overflow-x: hidden; background: white; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px;
         }
-        table { border-collapse: separate; border-spacing: 0; width: 100%; }
-        th, td { border: 1px solid #e0e0e0; padding: 10px 14px; text-align: center; }
-        th { background: #e8f5e9; font-weight: 600; position: sticky; top: 0; }
-        th.plant-header { text-align: left; min-width: 120px; position: sticky; left: 0; z-index: 2; background: #e8f5e9; }
-        td.plant-name { text-align: left; font-weight: 500; background: #fafafa; position: sticky; left: 0; z-index: 1; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 6px; text-align: center; font-size: 13px; }
+        th { background: #e8f5e9; font-weight: 600; }
+        th.plant-header { text-align: left; width: 90px; }
+        td.plant-name { text-align: left; font-weight: 500; background: #fafafa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         td.cell {
-            cursor: pointer; font-size: 20px; min-width: 50px;
+            cursor: pointer; font-size: 18px;
             transition: background 0.15s; user-select: none;
         }
         td.cell:hover { background: #f1f8e9; }
@@ -87,12 +87,14 @@
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
         .btn-close { background: #9e9e9e; color: white; }
         .nav-bar {
-            display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; align-items: center;
+            display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; align-items: center;
         }
         .btn-nav {
-            background: #e0e0e0; color: #333; font-size: 18px; padding: 6px 14px; border-radius: 6px;
+            background: #e0e0e0; color: #333; font-size: 18px; padding: 10px 16px; border-radius: 6px;
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
         .btn-nav:hover { background: #bdbdbd; }
+        .btn-nav:active { background: #9e9e9e; }
         .btn-nav.btn-today { font-size: 14px; background: #4caf50; color: white; }
         .btn-nav.btn-today:hover { background: #388e3c; }
     </style>
@@ -109,11 +111,11 @@
         <button class="btn-edit" onclick="openEditModal()">Edit Plants</button>
     </div>
     <div class="nav-bar">
-        <button class="btn-nav" onclick="shiftDays(-7)">&laquo;</button>
+        <button class="btn-nav" onclick="shiftPage(-1)">&laquo;</button>
         <button class="btn-nav" onclick="shiftDays(-1)">&lsaquo;</button>
         <button class="btn-nav btn-today" onclick="goToday()">Today</button>
         <button class="btn-nav" onclick="shiftDays(1)">&rsaquo;</button>
-        <button class="btn-nav" onclick="shiftDays(7)">&raquo;</button>
+        <button class="btn-nav" onclick="shiftPage(1)">&raquo;</button>
     </div>
     <div class="table-container">
         <table id="tracker-table"><thead><tr></tr></thead><tbody></tbody></table>
@@ -179,6 +181,11 @@
         }
         window.shiftDays = shiftDays;
 
+        function shiftPage(direction) {
+            shiftDays(direction * NUM_DAYS);
+        }
+        window.shiftPage = shiftPage;
+
         function goToday() {
             dayOffset = 0;
             render();
@@ -217,6 +224,10 @@
         }
 
         function cycleState(plant, date) {
+            const today = fmtDate(new Date());
+            if (date !== today) {
+                if (!confirm(`Update "${plant}" for ${date}? This is not today.`)) return;
+            }
             const key = `${plant}|${date}`;
             const current = records[key] || 'empty';
             if (current === 'empty') {
@@ -346,22 +357,6 @@
         document.querySelectorAll('.modal-overlay').forEach(el => {
             el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
         });
-
-        let touchStartX = 0;
-        let touchStartY = 0;
-        const tableContainer = document.querySelector('.table-container');
-        tableContainer.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-        tableContainer.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            const dy = e.changedTouches[0].clientY - touchStartY;
-            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 0) shiftDays(-1);
-                else shiftDays(1);
-            }
-        }, { passive: true });
     </script>
 </body>
 </html>
