@@ -132,27 +132,50 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCvZWFA3JB8LF6iA9qHFjqKqdeT1B3KY4",
+            authDomain: "plant-tracker-4d62b.firebaseapp.com",
+            databaseURL: "https://plant-tracker-4d62b-default-rtdb.firebaseio.com",
+            projectId: "plant-tracker-4d62b",
+            storageBucket: "plant-tracker-4d62b.firebasestorage.app",
+            messagingSenderId: "850452752836",
+            appId: "1:850452752836:web:a1cbab96308709f10b9c91"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
         const NUM_DAYS = 7;
         let dayOffset = 0;
-        let plants = JSON.parse(localStorage.getItem('pt-plants') || '["Basil","Tomato","Fern","Succulent"]');
-        let records = JSON.parse(localStorage.getItem('pt-records') || '{}');
+        let plants = [];
+        let records = {};
 
-        function save() {
-            localStorage.setItem('pt-plants', JSON.stringify(plants));
-            localStorage.setItem('pt-records', JSON.stringify(records));
-        }
+        onValue(ref(db, 'plants'), (snapshot) => {
+            plants = snapshot.val() || [];
+            render();
+        });
+
+        onValue(ref(db, 'records'), (snapshot) => {
+            records = snapshot.val() || {};
+            render();
+        });
 
         function shiftDays(n) {
             dayOffset += n;
             if (dayOffset > 0) dayOffset = 0;
             render();
         }
+        window.shiftDays = shiftDays;
 
         function goToday() {
             dayOffset = 0;
             render();
         }
+        window.goToday = goToday;
 
         function getDates() {
             const dates = [];
@@ -170,7 +193,9 @@
         }
 
         function fmtDisplay(d) {
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const day = d.toLocaleDateString('en-US', { weekday: 'short' });
+            const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `${day}\n${date}`;
         }
 
         function isToday(d) {
@@ -186,11 +211,13 @@
         function cycleState(plant, date) {
             const key = `${plant}|${date}`;
             const current = records[key] || 'empty';
-            if (current === 'empty') records[key] = 'watered';
-            else if (current === 'watered') records[key] = 'fertilized';
-            else delete records[key];
-            save();
-            render();
+            if (current === 'empty') {
+                set(ref(db, `records/${key}`), 'watered');
+            } else if (current === 'watered') {
+                set(ref(db, `records/${key}`), 'fertilized');
+            } else {
+                remove(ref(db, `records/${key}`));
+            }
         }
 
         function render() {
@@ -202,7 +229,8 @@
             thead.innerHTML = '<th class="plant-header">Plant</th>';
             dates.forEach(d => {
                 const th = document.createElement('th');
-                th.textContent = fmtDisplay(d);
+                const parts = fmtDisplay(d).split('\n');
+                th.innerHTML = `${parts[0]}<br>${parts[1]}`;
                 if (isToday(d)) th.classList.add('today');
                 thead.appendChild(th);
             });
@@ -235,15 +263,16 @@
             document.getElementById('add-modal').classList.add('active');
             document.getElementById('new-plant-name').focus();
         }
+        window.openAddModal = openAddModal;
 
         function addPlant() {
             const name = document.getElementById('new-plant-name').value.trim();
             if (!name) return;
             plants.push(name);
-            save();
-            render();
+            set(ref(db, 'plants'), plants);
             closeModal('add-modal');
         }
+        window.addPlant = addPlant;
 
         function openEditModal() {
             const list = document.getElementById('plant-list-edit');
@@ -255,27 +284,27 @@
             });
             document.getElementById('edit-modal').classList.add('active');
         }
+        window.openEditModal = openEditModal;
 
         function removePlant(index) {
             const plant = plants[index];
             Object.keys(records).forEach(key => {
-                if (key.startsWith(plant + '|')) delete records[key];
+                if (key.startsWith(plant + '|')) remove(ref(db, `records/${key}`));
             });
             plants.splice(index, 1);
-            save();
+            set(ref(db, 'plants'), plants);
             openEditModal();
-            render();
         }
+        window.removePlant = removePlant;
 
         function closeModal(id) {
             document.getElementById(id).classList.remove('active');
         }
+        window.closeModal = closeModal;
 
         document.querySelectorAll('.modal-overlay').forEach(el => {
             el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
         });
-
-        render();
     </script>
 </body>
 </html>
