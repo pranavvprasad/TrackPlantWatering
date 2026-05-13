@@ -37,7 +37,7 @@
         .table-container {
             overflow-x: hidden; background: white; border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px;
-            max-width: 600px; margin: 0 auto;
+            max-width: 700px; margin: 0 auto;
         }
         table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; }
         th, td { border: 1px solid #e0e0e0; padding: 8px 6px; text-align: center; font-size: 13px; }
@@ -227,7 +227,7 @@
             }
         });
 
-        const NUM_DAYS = 5;
+        const NUM_DAYS = window.innerWidth >= 768 ? 7 : 5;
         let dayOffset = 0;
         let plants = [];
         let records = {};
