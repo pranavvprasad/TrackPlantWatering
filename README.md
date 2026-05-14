@@ -34,12 +34,3 @@ The app is deployed via **Cloudflare Pages**, which connects directly to this Gi
 
 Firebase handles authentication and data storage. The Firebase API key in `index.html` is safe to be public — security is enforced by database rules, not key secrecy.
 
-## Running Locally
-
-Firebase Auth rejects `file:///` origins. To test locally:
-
-```bash
-python -m http.server 8000
-```
-
-Then open `http://localhost:8000`. Ensure `localhost` is listed in Firebase Console → Authentication → Authorized domains.
