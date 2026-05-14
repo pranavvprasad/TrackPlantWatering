@@ -88,6 +88,8 @@
             padding: 4px 8px; cursor: pointer; font-size: 12px;
         }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-confirm { background: #4caf50; color: white; }
+        .btn-confirm:hover { background: #388e3c; }
         .btn-close { background: #9e9e9e; color: white; }
         .nav-bar {
             display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; align-items: center;
@@ -107,10 +109,12 @@
         }
         .auth-screen p { color: #666; font-size: 14px; }
         .btn-signin {
-            background: #4285f4; color: white; padding: 12px 24px; border-radius: 6px;
-            font-size: 16px; display: flex; align-items: center; gap: 10px;
+            background: white; color: #333; padding: 12px 24px; border-radius: 8px;
+            font-size: 15px; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;
+            font-weight: 500;
         }
-        .btn-signin:hover { background: #3367d6; }
+        .btn-signin:hover { background: #f8f8f8; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
         .btn-signout {
             background: #757575; color: white; padding: 6px 12px; font-size: 12px; border-radius: 4px;
         }
@@ -195,6 +199,17 @@
             <ul class="plant-list" id="plant-list-edit"></ul>
             <div class="modal-actions">
                 <button class="btn-close" onclick="closeModal('edit-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal">
+            <h2>Update past date?</h2>
+            <p id="confirm-message" style="margin-bottom:16px; color:#555;"></p>
+            <div class="modal-actions">
+                <button class="btn-close" onclick="cancelConfirm()">Cancel</button>
+                <button class="btn-confirm" onclick="acceptConfirm()">Update</button>
             </div>
         </div>
     </div>
@@ -367,11 +382,21 @@
             return records[key] || 'empty';
         }
 
+        let pendingUpdate = null;
+
         function cycleState(plant, date) {
             const today = fmtDate(new Date());
             if (date !== today) {
-                if (!confirm(`Update "${plant}" for ${date}? This is not today.`)) return;
+                pendingUpdate = { plant, date };
+                document.getElementById('confirm-message').textContent =
+                    `Update "${plant}" for ${date}? This is not today.`;
+                document.getElementById('confirm-modal').classList.add('active');
+                return;
             }
+            applyUpdate(plant, date);
+        }
+
+        function applyUpdate(plant, date) {
             const key = `${plant}|${date}`;
             const current = records[key] || 'empty';
             if (current === 'empty') {
@@ -382,6 +407,21 @@
                 remove(userRef(`records/${key}`));
             }
         }
+
+        function acceptConfirm() {
+            if (pendingUpdate) {
+                applyUpdate(pendingUpdate.plant, pendingUpdate.date);
+                pendingUpdate = null;
+            }
+            closeModal('confirm-modal');
+        }
+        window.acceptConfirm = acceptConfirm;
+
+        function cancelConfirm() {
+            pendingUpdate = null;
+            closeModal('confirm-modal');
+        }
+        window.cancelConfirm = cancelConfirm;
 
         function render() {
             const dates = getDates();
