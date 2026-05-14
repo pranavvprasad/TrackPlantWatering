@@ -2,6 +2,8 @@
 
 A simple web app to track when you water and fertilize your plants.
 
+**Live:** https://trackplantwatering.pages.dev/
+
 ## Features
 
 - Track watering and fertilizing per plant per day
