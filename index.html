@@ -105,16 +105,27 @@
         .btn-nav.btn-today:hover { background: #388e3c; }
         .auth-screen {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 60vh; gap: 16px;
+            min-height: 60vh; gap: 20px; padding: 20px;
         }
-        .auth-screen p { color: #666; font-size: 14px; }
+        .auth-screen p { color: #666; font-size: 14px; margin: 0; }
+        .auth-card {
+            background: white; border-radius: 12px; padding: 28px 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08); width: 90%; max-width: 320px;
+            display: flex; flex-direction: column; align-items: center; gap: 14px;
+        }
+        .auth-card h2 { font-size: 16px; color: #2d5a2d; margin: 0; }
         .btn-signin {
             background: white; color: #333; padding: 12px 24px; border-radius: 8px;
-            font-size: 15px; display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;
-            font-weight: 500;
+            font-size: 15px; display: flex; align-items: center; gap: 10px; width: 100%;
+            justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0; font-weight: 500;
         }
-        .btn-signin:hover { background: #f8f8f8; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .btn-signin:hover { background: #f8f8f8; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+        .btn-guest {
+            background: none; border: none; color: #666; font-size: 13px;
+            cursor: pointer; padding: 6px; text-decoration: underline;
+        }
+        .btn-guest:hover { color: #333; }
         .btn-signout {
             background: #757575; color: white; padding: 6px 12px; font-size: 12px; border-radius: 4px;
         }
@@ -140,18 +151,20 @@
         .demo-table td.demo-fert { color: #e53935; background: #ffebee; }
         .demo-features { margin-top: 12px; font-size: 12px; color: #555; line-height: 1.6; padding-left: 16px; }
         .demo-features li { margin-bottom: 4px; }
-        .auth-divider { color: #999; font-size: 13px; margin: 4px 0; }
+        .auth-divider { color: #bbb; font-size: 12px; margin: 2px 0; text-transform: uppercase; letter-spacing: 1px; }
         .auth-form {
-            display: flex; flex-direction: column; gap: 8px; width: 260px;
+            display: flex; flex-direction: column; gap: 8px; width: 100%;
         }
         .auth-form input {
-            padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+            padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
+            outline: none; transition: border-color 0.2s;
         }
+        .auth-form input:focus { border-color: #4caf50; }
         .auth-form .btn-email {
-            background: #333; color: white; padding: 10px; border-radius: 6px;
-            font-size: 14px; cursor: pointer; border: none;
+            background: #2d5a2d; color: white; padding: 11px; border-radius: 8px;
+            font-size: 14px; cursor: pointer; border: none; font-weight: 500;
         }
-        .auth-form .btn-email:hover { background: #555; }
+        .auth-form .btn-email:hover { background: #3d7a3d; }
         .auth-form .btn-toggle {
             background: none; border: none; color: #4285f4; font-size: 13px;
             cursor: pointer; padding: 4px;
@@ -162,16 +175,19 @@
     <h1>&#127793; Plant Watering Tracker</h1>
 
     <div class="auth-screen" id="auth-screen">
-        <p>Sign in to access the tracker</p>
-        <button class="btn-signin" onclick="signIn()">&#x1F310; Sign in with Google</button>
-        <p class="auth-divider">— or —</p>
-        <div class="auth-form">
-            <input type="email" id="auth-email" placeholder="Email">
-            <input type="password" id="auth-password" placeholder="Password">
-            <button class="btn-email" id="auth-submit" onclick="emailSignIn()">Sign in</button>
-            <button class="btn-toggle" id="auth-toggle" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
+        <div class="auth-card">
+            <h2>Welcome</h2>
+            <button class="btn-signin" onclick="signIn()">&#x1F310; Sign in with Google</button>
+            <p class="auth-divider">or</p>
+            <div class="auth-form">
+                <input type="email" id="auth-email" placeholder="Email">
+                <input type="password" id="auth-password" placeholder="Password">
+                <button class="btn-email" id="auth-submit" onclick="emailSignIn()">Sign in</button>
+                <button class="btn-toggle" id="auth-toggle" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
+            </div>
+            <p class="auth-error" id="auth-error"></p>
         </div>
-        <p class="auth-error" id="auth-error"></p>
+        <button class="btn-guest" onclick="guestMode()">Try as Guest (data not saved)</button>
         <div class="demo-section">
             <h3>How it works</h3>
             <table class="demo-table">
@@ -270,6 +286,7 @@
         const provider = new GoogleAuthProvider();
 
         let currentUid = null;
+        let isGuestMode = false;
         let isSignUpMode = false;
 
         getRedirectResult(auth).catch(err => {
@@ -306,7 +323,30 @@
         }
         window.toggleAuthMode = toggleAuthMode;
 
+        function guestMode() {
+            isGuestMode = true;
+            plants = ['Basil', 'Tomato', 'Mint'];
+            records = {};
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-content').classList.add('visible');
+            document.getElementById('user-bar').innerHTML =
+                `Guest mode (not saved) <button class="btn-signout" onclick="exitGuest()">Sign in</button>`;
+            render();
+        }
+        window.guestMode = guestMode;
+
+        function exitGuest() {
+            isGuestMode = false;
+            plants = [];
+            records = {};
+            listenersStarted = false;
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('app-content').classList.remove('visible');
+        }
+        window.exitGuest = exitGuest;
+
         function signOutUser() {
+            if (isGuestMode) { exitGuest(); return; }
             signOut(auth);
         }
         window.signOutUser = signOutUser;
@@ -434,6 +474,13 @@
         function applyUpdate(plant, date) {
             const key = `${plant}|${date}`;
             const current = records[key] || 'empty';
+            if (isGuestMode) {
+                if (current === 'empty') records[key] = 'watered';
+                else if (current === 'watered') records[key] = 'fertilized';
+                else delete records[key];
+                render();
+                return;
+            }
             if (current === 'empty') {
                 set(userRef(`records/${key}`), 'watered');
             } else if (current === 'watered') {
@@ -511,7 +558,8 @@
             const name = document.getElementById('new-plant-name').value.trim();
             if (!name) return;
             plants.push(name);
-            set(userRef('plants'), plants);
+            if (!isGuestMode) set(userRef('plants'), plants);
+            else render();
             closeModal('add-modal');
         }
         window.addPlant = addPlant;
@@ -541,12 +589,13 @@
                 if (key.startsWith(oldName + '|')) {
                     const date = key.split('|')[1];
                     const newKey = `${newName}|${date}`;
-                    set(userRef(`records/${newKey}`), records[key]);
-                    remove(userRef(`records/${key}`));
+                    if (isGuestMode) { records[newKey] = records[key]; delete records[key]; }
+                    else { set(userRef(`records/${newKey}`), records[key]); remove(userRef(`records/${key}`)); }
                 }
             });
             plants[index] = newName;
-            set(userRef('plants'), plants);
+            if (!isGuestMode) set(userRef('plants'), plants);
+            else render();
         }
         window.renamePlant = renamePlant;
 
@@ -556,7 +605,7 @@
             const temp = plants[index];
             plants[index] = plants[newIndex];
             plants[newIndex] = temp;
-            set(userRef('plants'), plants);
+            if (!isGuestMode) set(userRef('plants'), plants);
             openEditModal();
         }
         window.movePlant = movePlant;
@@ -564,10 +613,13 @@
         function removePlant(index) {
             const plant = plants[index];
             Object.keys(records).forEach(key => {
-                if (key.startsWith(plant + '|')) remove(userRef(`records/${key}`));
+                if (key.startsWith(plant + '|')) {
+                    if (isGuestMode) delete records[key];
+                    else remove(userRef(`records/${key}`));
+                }
             });
             plants.splice(index, 1);
-            set(userRef('plants'), plants);
+            if (!isGuestMode) set(userRef('plants'), plants);
             openEditModal();
         }
         window.removePlant = removePlant;
