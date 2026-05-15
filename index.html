@@ -125,6 +125,21 @@
         .app-content { display: none; }
         .app-content.visible { display: block; }
         .auth-error { color: #e53935; font-size: 14px; margin-top: 8px; }
+        .demo-section {
+            margin-top: 32px; padding: 20px; background: white; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); max-width: 340px; width: 90%;
+        }
+        .demo-section h3 { color: #2d5a2d; font-size: 14px; margin-bottom: 12px; text-align: center; }
+        .demo-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .demo-table th, .demo-table td {
+            border: 1px solid #e0e0e0; padding: 6px 4px; text-align: center;
+        }
+        .demo-table th { background: #e8f5e9; font-weight: 600; font-size: 11px; }
+        .demo-table td.demo-plant { text-align: left; font-weight: 500; background: #fafafa; }
+        .demo-table td.demo-water { color: #2196f3; background: #e3f2fd; }
+        .demo-table td.demo-fert { color: #e53935; background: #ffebee; }
+        .demo-features { margin-top: 12px; font-size: 12px; color: #555; line-height: 1.6; padding-left: 16px; }
+        .demo-features li { margin-bottom: 4px; }
         .auth-divider { color: #999; font-size: 13px; margin: 4px 0; }
         .auth-form {
             display: flex; flex-direction: column; gap: 8px; width: 260px;
@@ -157,6 +172,26 @@
             <button class="btn-toggle" id="auth-toggle" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
         </div>
         <p class="auth-error" id="auth-error"></p>
+        <div class="demo-section">
+            <h3>How it works</h3>
+            <table class="demo-table">
+                <tr><th></th><th>Mon<br>May 12</th><th>Tue<br>May 13</th><th>Wed<br>May 14</th></tr>
+                <tr><td class="demo-plant">Basil</td><td class="demo-water">&#10003;</td><td></td><td class="demo-water">&#10003;</td></tr>
+                <tr><td class="demo-plant">Tomato</td><td></td><td class="demo-fert">&#10003;</td><td></td></tr>
+                <tr><td class="demo-plant">Mint</td><td class="demo-water">&#10003;</td><td class="demo-water">&#10003;</td><td></td></tr>
+            </table>
+            <div style="display:flex; gap:16px; justify-content:center; margin-top:12px; font-size:12px;">
+                <span><span class="dot dot-water" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Watered</span>
+                <span><span class="dot dot-fert" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Fertilized</span>
+                <span><span class="dot dot-empty" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> No action</span>
+            </div>
+            <ul class="demo-features">
+                <li>Tap a cell to cycle through states</li>
+                <li>Add, rename, and reorder your plants</li>
+                <li>Syncs across all your devices in real time</li>
+                <li>Scroll back to see your full history</li>
+            </ul>
+        </div>
     </div>
 
     <div class="app-content" id="app-content">
